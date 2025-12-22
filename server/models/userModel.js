@@ -52,4 +52,18 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+
+userSchema.methods.generateVerificationCode = function () {
+  function generateRandomFourDigitNumber() {
+    const firstDigit = Math.floor(Math.random() * 9) + 1; // Ensure first digit is not zero
+    const otherDigits = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10));
+    return parseInt(firstDigit.toString() + otherDigits.join(''), 10);
+  }
+  const verificationCode = generateRandomFourDigitNumber();
+  this.verificationCode = verificationCode;
+  this.verificationCodeExpiry = Date.now() + 15 * 60 * 1000; // 15 minutes from now
+  return verificationCode;
+}
+
 export const User = mongoose.model("User", userSchema);
