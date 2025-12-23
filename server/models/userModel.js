@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 
 const userSchema = new mongoose.Schema(
   {
@@ -11,6 +12,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       lowercase: true,
+      unique: true,
     },
     password: {
       type: String,
@@ -46,24 +48,32 @@ const userSchema = new mongoose.Schema(
       url: String,
     },
     verificationCode: Number,
-    verificationCodeExpiry: Date,
+    verificationCodeExpire: Date,
     resetPasswordToken: String,
     resetPasswordExpire: Date,
   },
   { timestamps: true }
 );
 
-
 userSchema.methods.generateVerificationCode = function () {
   function generateRandomFourDigitNumber() {
     const firstDigit = Math.floor(Math.random() * 9) + 1; // Ensure first digit is not zero
-    const otherDigits = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10));
-    return parseInt(firstDigit.toString() + otherDigits.join(''), 10);
+    const otherDigits = Array.from({ length: 3 }, () =>
+      Math.floor(Math.random() * 10)
+    );
+    return parseInt(firstDigit.toString() + otherDigits.join(""), 10);
   }
   const verificationCode = generateRandomFourDigitNumber();
   this.verificationCode = verificationCode;
-  this.verificationCodeExpiry = Date.now() + 15 * 60 * 1000; // 15 minutes from now
+  this.verificationCodeExpire = Date.now() + 15 * 60 * 1000; // 15 minutes from now
   return verificationCode;
-}
+};
+
+userSchema.methods.generateToken = function () {
+  return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE || "7d",
+  });
+};
+
 
 export const User = mongoose.model("User", userSchema);
