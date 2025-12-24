@@ -83,3 +83,19 @@ export const verifyOtp = catchAsyncErrors(async (req, res, next) => {
 
   return sendToken(user, 200, "Account verified successfully", res);
 });
+
+export const loginUser = catchAsyncErrors(async (req, res, next) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) {
+    return next(new ErrorHandler("Please enter email and password", 400));
+  }
+  const user = await User.findOne({ email, accountVerified : true }).select("+password");
+  if (!user) {
+    return next(new ErrorHandler("Invalid email or account not verified", 401));
+  }
+  const isPasswordMatched = await bcrypt.compare(password, user.password);
+  if (!isPasswordMatched) {
+    return next(new ErrorHandler("Invalid password", 401));
+  } 
+  return sendToken(user, 200, "Login successful", res);
+});
