@@ -89,23 +89,35 @@ export const loginUser = catchAsyncErrors(async (req, res, next) => {
   if (!email || !password) {
     return next(new ErrorHandler("Please enter email and password", 400));
   }
-  const user = await User.findOne({ email, accountVerified : true }).select("+password");
+  const user = await User.findOne({ email, accountVerified: true }).select(
+    "+password"
+  );
   if (!user) {
     return next(new ErrorHandler("Invalid email or account not verified", 401));
   }
   const isPasswordMatched = await bcrypt.compare(password, user.password);
   if (!isPasswordMatched) {
     return next(new ErrorHandler("Invalid password", 401));
-  } 
+  }
   return sendToken(user, 200, "Login successful", res);
 });
 
-export const logoutUser = catchAsyncErrors(async (req, res, next) => {
-  res.cookie("token", null, {
-    expires: new Date(Date.now()),
-    httpOnly: true,
-  }).json({
+export const logoutUser = catchAsyncErrors(async (req, res) => {
+  res
+    .cookie("token", null, {
+      expires: new Date(Date.now()),
+      httpOnly: true,
+    })
+    .json({
+      success: true,
+      message: "Logged out successfully",
+    });
+});
+
+export const getUserProfile = catchAsyncErrors(async (req, res) => {
+  const user = req.user;
+  res.status(200).json({
     success: true,
-    message: "Logged out successfully",
+    user,
   });
 });
