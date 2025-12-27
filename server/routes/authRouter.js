@@ -5,6 +5,7 @@ import {
   registerUser,
   verifyOtp,
   loginUser,
+  forgotPassword,
 } from "../controllers/authController.js";
 
 import {
@@ -23,5 +24,6 @@ router.get("/logout", preventLogoutIfAuthenticated, logoutUser);
 
 // ✅ IMPORTANT: add isAuthenticatedUser here
 router.get("/me", isAuthenticatedUser, getUserProfile);
+router.post("/password/forgot", forgotPassword);
 
 export default router;

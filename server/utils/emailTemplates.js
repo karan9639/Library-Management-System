@@ -89,3 +89,102 @@ export function emailTemplates(verificationCode) {
         </html>
     `;
 }
+
+export function generateForgotPasswordEmailTemplate(name, resetPasswordUrl) {
+  const year = new Date().getFullYear();
+
+  return `
+  <!doctype html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta name="x-apple-disable-message-reformatting" />
+      <title>Password Reset</title>
+    </head>
+    <body style="margin:0; padding:0; background-color:#f5f5f5; font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;">
+      
+      <!-- Full width wrapper -->
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f5f5f5; padding:20px 0;">
+        <tr>
+          <td align="center" style="padding:0 12px;">
+            
+            <!-- Card -->
+            <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0"
+              style="width:600px; max-width:600px; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+              
+              <!-- Header -->
+              <tr>
+                <td style="background:#1e4d5c; background-image:linear-gradient(135deg,#2e6c80 0%,#1e4d5c 100%); padding:26px 20px; text-align:center;">
+                  <div style="color:#ffffff; font-size:28px; font-weight:700; line-height:1.2;">
+                    Password Reset Request
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding:28px 26px;">
+                  <p style="margin:0 0 14px; color:#333333; font-size:16px; line-height:1.6;">
+                    Hello ${name},
+                  </p>
+                  <p style="margin:0 0 18px; color:#333333; font-size:16px; line-height:1.6;">
+                    We received a request to reset your password. Click the button below to proceed:
+                  </p>
+
+                  <!-- Button -->
+                  <div style="text-align:center; margin:22px 0 18px;">
+                    <a href="${resetPasswordUrl}"
+                      style="
+                        display:inline-block;
+                        background-color:#2e6c80;
+                        border:1px solid #2e6c80;
+                        padding:12px 18px;
+                        border-radius:6px;
+                        text-decoration:none;
+                        font-weight:700;
+                        font-size:16px;
+                        line-height:1;
+                        color:#ffffff !important;
+                        -webkit-text-size-adjust:none;
+                      "
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Reset Password
+                    </a>
+                  </div>
+
+                  <p style="margin:0 0 16px; color:#333333; font-size:16px; line-height:1.6;">
+                    If you didn't request this change, please ignore this email.
+                  </p>
+
+                  <p style="margin:0; color:#333333; font-size:16px; line-height:1.6;">
+                    Best regards,<br />
+                    <strong>Library Management System Team</strong>
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background:#f9f9f9; padding:18px 16px; text-align:center; border-top:1px solid #eeeeee;">
+                  <p style="margin:0; color:#666666; font-size:13px; line-height:1.4;">
+                    © ${year} Library Management System. All rights reserved.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+            <!-- /Card -->
+
+          </td>
+        </tr>
+      </table>
+      <!-- /Wrapper -->
+
+    </body>
+  </html>
+  `;
+}
+
