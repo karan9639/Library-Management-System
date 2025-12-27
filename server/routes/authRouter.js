@@ -7,6 +7,7 @@ import {
   loginUser,
   forgotPassword,
   resetPassword,
+  updatePassword,
 } from "../controllers/authController.js";
 
 import {
@@ -27,5 +28,7 @@ router.get("/logout", preventLogoutIfAuthenticated, logoutUser);
 router.get("/me", isAuthenticatedUser, getUserProfile);
 router.post("/password/forgot", forgotPassword);
 router.put("/password/reset/:token", resetPassword);
+router.post("/password/update", isAuthenticatedUser, updatePassword);
+
 
 export default router;
