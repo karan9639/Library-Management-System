@@ -50,3 +50,5 @@ const borrowSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+export const Borrow = mongoose.model("Borrow", borrowSchema);
