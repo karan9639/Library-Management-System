@@ -1,15 +1,43 @@
 import express from "express";
-import { borrowedBooks, recordBorrowedBook, getBorrowedBooksForAdmin, returnBorrowedBook } from "../controllers/borrowController.js";
-import { isAuthenticatedUser, isAuthorized } from "../middlewares/authMiddleware.js";
+import {
+  borrowedBooks,
+  recordBorrowedBook,
+  getBorrowedBooksForAdmin,
+  returnBorrowedBook,
+} from "../controllers/borrowController.js";
+
+import {
+  isAuthenticatedUser,
+  isAuthorized,
+} from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/record-borrow-book/:id",isAuthenticatedUser, isAuthorized("Admin") ,recordBorrowedBook);
+// Admin: record borrow for a user by email
+router.post(
+  "/record-borrow-book/:id",
+  isAuthenticatedUser,
+  isAuthorized("Admin", "user"),
+  recordBorrowedBook
+);
 
-router.get("/borrowed-books-by-user", isAuthenticatedUser, isAuthorized("Admin"), getBorrowedBooksForAdmin);
+// Admin: view all borrows
+router.get(
+  "/borrowed-books-by-user",
+  isAuthenticatedUser,
+  isAuthorized("Admin", "user"),
+  getBorrowedBooksForAdmin
+);
 
+// User: my borrowed books
 router.get("/my-borrowed-books", isAuthenticatedUser, borrowedBooks);
 
-router.put("/return-borrowed-book/:bookId", isAuthenticatedUser, isAuthorized("Admin"), returnBorrowedBook);
+// Admin: return by borrowId
+router.put(
+  "/return-borrowed-book/:borrowId",
+  isAuthenticatedUser,
+  isAuthorized("Admin", "user"),
+  returnBorrowedBook
+);
 
 export default router;
