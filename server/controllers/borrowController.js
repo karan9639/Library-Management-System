@@ -4,6 +4,7 @@ import ErrorHandler from "../middlewares/errorMiddlewares.js";
 import { Borrow } from "../models/borrowModel.js";
 import { Book } from "../models/bookModel.js";
 import { User } from "../models/userModel.js";
+import { calculateFine, formatINR } from "../utils/fineCalculator.js";
 
 /**
  * Helpers
@@ -11,16 +12,10 @@ import { User } from "../models/userModel.js";
 const normalizeEmail = (email) =>
   typeof email === "string" ? email.trim().toLowerCase() : "";
 
-const addDays = (days) => new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-
-// Optional fine (set env FINE_PER_DAY=10 etc). Default 0 = no fine.
-const FINE_PER_DAY = Number(process.env.FINE_PER_DAY || 0);
-const calcFine = (dueDate, returnDate) => {
-  if (!FINE_PER_DAY) return 0;
-  const lateMs = new Date(returnDate).getTime() - new Date(dueDate).getTime();
-  if (lateMs <= 0) return 0;
-  const daysLate = Math.ceil(lateMs / (24 * 60 * 60 * 1000));
-  return daysLate * FINE_PER_DAY;
+const addDaysFrom = (date, days) => {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
 };
 
 /**
@@ -44,7 +39,7 @@ export const borrowedBooks = catchAsyncErrors(async (req, res, next) => {
 
 /**
  * POST /api/v1/borrow/record-borrow-book/:id
- * Admin records a borrow for a user by email
+ * body: { email }
  */
 export const recordBorrowedBook = catchAsyncErrors(async (req, res, next) => {
   const bookId = req.params?.id;
@@ -53,7 +48,6 @@ export const recordBorrowedBook = catchAsyncErrors(async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(bookId)) {
     return next(new ErrorHandler("Invalid book id", 400));
   }
-
   if (!email) {
     return next(new ErrorHandler("Email is required", 400));
   }
@@ -92,16 +86,15 @@ export const recordBorrowedBook = catchAsyncErrors(async (req, res, next) => {
   // 4) Update availability based on new quantity
   const shouldBeAvailable = book.quantity > 0;
   if (book.availability !== shouldBeAvailable) {
-    await Book.updateOne(
-      { _id: book._id },
-      { $set: { availability: shouldBeAvailable } }
-    );
     book.availability = shouldBeAvailable;
+    await book.save();
   }
 
-  // 5) Create borrow record (returnDate must be null at first)
-  const dueDate = addDays(7);
+  // ✅ Fix dueDate bug: dueDate must be based on borrowDate
+  const borrowDate = new Date();
+  const dueDate = addDaysFrom(borrowDate, 7);
 
+  // 5) Create borrow record
   const borrow = await Borrow.create({
     user: {
       id: user._id,
@@ -110,7 +103,7 @@ export const recordBorrowedBook = catchAsyncErrors(async (req, res, next) => {
     },
     book: book._id,
     price: book.price,
-    borrowDate: new Date(),
+    borrowDate,
     dueDate,
     returned: false,
     returnDate: null,
@@ -127,7 +120,6 @@ export const recordBorrowedBook = catchAsyncErrors(async (req, res, next) => {
 
 /**
  * GET /api/v1/borrow/borrowed-books-by-user
- * Admin view of all borrowed books
  * Query:
  *  - returned=true/false
  *  - q=search (email or name or book title)
@@ -167,41 +159,71 @@ export const getBorrowedBooksForAdmin = catchAsyncErrors(
 
 /**
  * PUT /api/v1/borrow/return-borrowed-book/:borrowId
- * Admin marks borrow as returned + increases book quantity
+ *
+ * ✅ Correct usage: pass real borrowId
+ * ✅ Fallback: if frontend passes bookId by mistake, send body { email }
  */
 export const returnBorrowedBook = catchAsyncErrors(async (req, res, next) => {
-  const borrowId = req.params?.borrowId;
+  const id = req.params?.borrowId; // could be borrowId OR bookId (fallback)
+  const email = normalizeEmail(req.body?.email);
 
-  if (!mongoose.Types.ObjectId.isValid(borrowId)) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
     return next(new ErrorHandler("Invalid borrow id", 400));
   }
 
-  // 1) Find borrow
-  const borrow = await Borrow.findById(borrowId);
+  // 1) Try: treat id as Borrow _id (correct)
+  let borrow = await Borrow.findById(id);
+
+  // 2) Fallback: treat id as Book _id + email
+  if (!borrow) {
+    if (!email) {
+      return next(
+        new ErrorHandler(
+          "Borrow record not found. If you are passing a bookId, include email in body.",
+          404
+        )
+      );
+    }
+
+    const user = await User.findOne({ email }).select("_id");
+    if (!user) return next(new ErrorHandler("User not found", 404));
+
+    borrow = await Borrow.findOne({
+      book: id, // here id is bookId
+      "user.id": user._id,
+      returned: false,
+    });
+  }
+
   if (!borrow) return next(new ErrorHandler("Borrow record not found", 404));
 
   if (borrow.returned) {
     return next(new ErrorHandler("This book is already returned", 400));
   }
 
-  // 2) Mark returned
+  // 3) Mark returned + calculate fine (INR)
   const now = new Date();
+  const fine = calculateFine(borrow.dueDate, now);
+
   borrow.returned = true;
   borrow.returnDate = now;
-  borrow.fine = calcFine(borrow.dueDate, now);
+  borrow.fine = fine;
   await borrow.save();
 
-  // 3) Increment inventory
-  const book = await Book.findById(borrow.book);
-  if (!book) return next(new ErrorHandler("Book not found", 404));
+  // 4) Increment inventory (atomic)
+  const updatedBook = await Book.findByIdAndUpdate(
+    borrow.book,
+    { $inc: { quantity: 1 }, $set: { availability: true } },
+    { new: true }
+  );
 
-  book.quantity += 1;
-  book.availability = true;
-  await book.save();
+  if (!updatedBook) return next(new ErrorHandler("Book not found", 404));
 
   return res.status(200).json({
     success: true,
     message: "Book returned successfully",
-    fine: borrow.fine,
+    fine: borrow.fine, // number (INR)
+    fineInINR: formatINR(borrow.fine), // "₹10.00"
+    borrow,
   });
 });

@@ -11,7 +11,7 @@ import {
 } from "../controllers/authController.js";
 
 import {
-  isAuthenticatedUser,
+  isAuthenticated,
   preventLoginIfAuthenticated,
   preventLogoutIfAuthenticated,
 } from "../middlewares/authMiddleware.js";
@@ -24,11 +24,10 @@ router.post("/verify-otp", verifyOtp);
 router.post("/login", preventLoginIfAuthenticated, loginUser);
 router.get("/logout", preventLogoutIfAuthenticated, logoutUser);
 
-// ✅ IMPORTANT: add isAuthenticatedUser here
-router.get("/me", isAuthenticatedUser, getUserProfile);
+// ✅ IMPORTANT: add isAuthenticated here
+router.get("/me", isAuthenticated, getUserProfile);
 router.post("/password/forgot", forgotPassword);
 router.put("/password/reset/:token", resetPassword);
-router.post("/password/update", isAuthenticatedUser, updatePassword);
-
+router.post("/password/update", isAuthenticated, updatePassword);
 
 export default router;

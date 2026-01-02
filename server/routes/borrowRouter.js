@@ -7,35 +7,31 @@ import {
 } from "../controllers/borrowController.js";
 
 import {
-  isAuthenticatedUser,
+  isAuthenticated,
   isAuthorized,
 } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// Admin: record borrow for a user by email
 router.post(
   "/record-borrow-book/:id",
-  isAuthenticatedUser,
+  isAuthenticated,
   isAuthorized("Admin", "user"),
   recordBorrowedBook
 );
 
-// Admin: view all borrows
 router.get(
   "/borrowed-books-by-user",
-  isAuthenticatedUser,
+  isAuthenticated,
   isAuthorized("Admin", "user"),
   getBorrowedBooksForAdmin
 );
 
-// User: my borrowed books
-router.get("/my-borrowed-books", isAuthenticatedUser, borrowedBooks);
+router.get("/my-borrowed-books", isAuthenticated, borrowedBooks);
 
-// Admin: return by borrowId
 router.put(
   "/return-borrowed-book/:borrowId",
-  isAuthenticatedUser,
+  isAuthenticated,
   isAuthorized("Admin", "user"),
   returnBorrowedBook
 );

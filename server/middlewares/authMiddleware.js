@@ -45,7 +45,7 @@ export const preventLoginIfAuthenticated = catchAsyncErrors(
   }
 );
 
-export const isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
+export const isAuthenticated = catchAsyncErrors(async (req, res, next) => {
   const { token } = req.cookies;
 
   if (!token) {
